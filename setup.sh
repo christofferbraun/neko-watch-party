@@ -337,7 +337,8 @@ detect_encoder_element() {
   H264_ELEMENT=x264enc
   [[ $NEKO_ENCODER == qsv ]] || return 0
   step "Checking Quick Sync in the neko image"
-  dk pull -q "$NEKO_IMAGE" >/dev/null
+  info "Downloading the neko image first (around 1 GB the first time, so this can take a few minutes)."
+  dk pull "$NEKO_IMAGE"
   local el
   for el in vah264enc vaapih264enc; do
     if dk run --rm --device /dev/dri:/dev/dri --entrypoint gst-inspect-1.0 "$NEKO_IMAGE" "$el" >/dev/null 2>&1; then
@@ -634,7 +635,7 @@ start_containers() {
   ask_yn start "Start neko now?" yes
   [[ $start == yes ]] || { info "Start later with: docker compose up -d"; return 0; }
   step "Starting"
-  compose pull -q
+  compose pull
   # Recreate so changes to neko.yaml and policies.json are picked up.
   compose up -d --force-recreate --remove-orphans
   ok "Containers started"
@@ -678,6 +679,9 @@ main() {
   load_env
   ask_settings
   confirm_settings
+  # Save answers now, so they're the defaults if setup is interrupted during the download.
+  write_env
+  write_gluetun_env
   detect_encoder_element
   write_files
   prepare_browser
