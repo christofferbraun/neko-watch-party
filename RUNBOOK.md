@@ -168,7 +168,16 @@ sudo tcpdump -ni any port 52000
 
 **Video works for viewers outside, but never connects at home.** Your router doesn't support hairpin NAT, and neko advertises only your public IP. For now, watch from mobile data. The lasting fix is running neko with host networking and full ICE so it also offers its LAN IP, but that changes how cloudflared and the VPN proxy connect.
 
-**`setup.sh` says the image can't see a Quick Sync encoder.** The container couldn't use `/dev/dri`. Check the driver on the host (`sudo vainfo --display drm --device /dev/dri/renderD128`), make sure the `intel-media-va-driver-non-free` (or `intel-media-va-driver`) package is installed, and re-run `./setup.sh`. Or accept the CPU fallback.
+**`setup.sh` says the image has no VA-API plugin.** The neko image changed and dropped its GPU encoder plugins. Accept the CPU fallback for now, or pin an older image tag.
+
+**Not sure the iGPU encoder actually works?** The neko image doesn't include GStreamer's inspection tool, so this throwaway container installs it and lists the encoders your GPU exposes (it changes nothing on the server):
+
+```bash
+sudo docker run --rm --device /dev/dri:/dev/dri --entrypoint sh ghcr.io/m1k1o/neko/intel-firefox:latest -c \
+  'apt-get update -qq >/dev/null && apt-get install -y -qq gstreamer1.0-tools >/dev/null && gst-inspect-1.0 2>/dev/null | grep -iE "^va.*264"'
+```
+
+You want to see `vah264enc: VA-API H.264 Encoder in Intel(R) ... Graphics`. If nothing is listed, check the driver on the host (`sudo vainfo --display drm --device /dev/dri/renderD128`) and make sure `intel-media-va-driver-non-free` (or `intel-media-va-driver`) is installed.
 
 **Pipeline errors in the log mentioning `/dev/dri` or VA.** Check that the device is passed through:
 

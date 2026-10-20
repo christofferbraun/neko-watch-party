@@ -40,7 +40,7 @@ fi
 step "Video encoding"
 encoder=$(grep -oE 'vah264enc|vaapih264enc|x264enc' neko.yaml | head -n1)
 if [[ -n $encoder ]]; then
-  check "neko image has the $encoder encoder" dk exec neko gst-inspect-1.0 "$encoder"
+  check "neko image has the plugin for $encoder" container_has_plugin "$encoder"
 fi
 if [[ $encoder == va*h264enc ]]; then
   check "iGPU is passed into the container" dk exec neko test -e /dev/dri/renderD128

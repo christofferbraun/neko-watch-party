@@ -61,6 +61,27 @@ fetch_default_policy() {
   dk rm "$tmp" >/dev/null
 }
 
+# GStreamer plugin file that provides each H.264 encoder element.
+encoder_plugin() {
+  case $1 in
+    vah264enc) echo libgstva.so ;;
+    vaapih264enc) echo libgstvaapi.so ;;
+    x264enc) echo libgstx264.so ;;
+  esac
+}
+
+# image_has_plugin IMAGE ELEMENT: whether the image ships the plugin for ELEMENT.
+image_has_plugin() {
+  # shellcheck disable=SC2016  # $0 expands inside the container's shell
+  dk run --rm --entrypoint sh "$1" -c 'ls /usr/lib/*/gstreamer-1.0/"$0"' "$(encoder_plugin "$2")" >/dev/null 2>&1
+}
+
+# container_has_plugin ELEMENT: the same check against the running neko container.
+container_has_plugin() {
+  # shellcheck disable=SC2016
+  dk exec neko sh -c 'ls /usr/lib/*/gstreamer-1.0/"$0"' "$(encoder_plugin "$1")" >/dev/null 2>&1
+}
+
 public_ip() {
   curl -4 -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true
 }

@@ -6,7 +6,7 @@
 #   ./setup.sh             ask everything
 #   ./setup.sh --defaults  reuse saved answers without asking (regenerates config)
 set -euo pipefail
-source "$(dirname "$0")/lib/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 ACCEPT_DEFAULTS=no
 GENERATED_SECRETS=()
@@ -333,6 +333,7 @@ confirm_settings() {
 }
 
 # Picks the H.264 element: the newer va plugin if the image has it, else the older vaapi one.
+# The image has no gst-inspect, so this looks for the plugin files instead.
 detect_encoder_element() {
   H264_ELEMENT=x264enc
   [[ $NEKO_ENCODER == qsv ]] || return 0
@@ -341,13 +342,13 @@ detect_encoder_element() {
   dk pull "$NEKO_IMAGE"
   local el
   for el in vah264enc vaapih264enc; do
-    if dk run --rm --device /dev/dri:/dev/dri --entrypoint gst-inspect-1.0 "$NEKO_IMAGE" "$el" >/dev/null 2>&1; then
+    if image_has_plugin "$NEKO_IMAGE" "$el"; then
       H264_ELEMENT=$el
       ok "Using $el"
       return 0
     fi
   done
-  warn "The image can't see a Quick Sync H.264 encoder through /dev/dri."
+  warn "The neko image has no VA-API GStreamer plugin, so it can't encode on the iGPU."
   local fallback
   ask_yn fallback "Fall back to CPU encoding (x264)?" yes
   [[ $fallback == yes ]] || die "Check your iGPU driver: sudo vainfo --display drm --device /dev/dri/renderD128"
