@@ -336,6 +336,7 @@ confirm_settings() {
 # The image has no gst-inspect, so this looks for the plugin files instead.
 detect_encoder_element() {
   H264_ELEMENT=x264enc
+  INTEL_FIX=no
   [[ $NEKO_ENCODER == qsv ]] || return 0
   step "Checking Quick Sync in the neko image"
   info "Downloading the neko image first (around 1 GB the first time, so this can take a few minutes)."
@@ -345,6 +346,11 @@ detect_encoder_element() {
     if image_has_plugin "$NEKO_IMAGE" "$el"; then
       H264_ELEMENT=$el
       ok "Using $el"
+      # Images older than neko's fix for encoders failing to register lack neko-serve.
+      if ! dk run --rm --entrypoint test "$NEKO_IMAGE" -x /usr/bin/neko-serve >/dev/null 2>&1; then
+        INTEL_FIX=yes
+        ok "This image predates neko's Quick Sync startup fix; applying it from intel-fix/"
+      fi
       return 0
     fi
   done
@@ -523,6 +529,14 @@ EOF
       - ./neko.yaml:/etc/neko/neko.yaml:ro
       - ./profile:/home/neko/.mozilla/firefox/profile.default
       - ./policies.json:/usr/lib/firefox/distribution/policies.json:ro
+EOF
+    if [[ $INTEL_FIX == yes ]]; then
+      cat <<'EOF'
+      - ./intel-fix/neko-serve:/usr/bin/neko-serve:ro
+      - ./intel-fix/supervisord.neko.conf:/etc/neko/supervisord/neko.conf:ro
+EOF
+    fi
+    cat <<EOF
     environment:
       NEKO_MEMBER_MULTIUSER_USER_PASSWORD: \${NEKO_USER_PASSWORD}
       NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: \${NEKO_ADMIN_PASSWORD}
@@ -530,13 +544,6 @@ EOF
       NEKO_WEBRTC_TCPMUX: $port
       NEKO_WEBRTC_ICELITE: 1
 EOF
-    if [[ $NEKO_ENCODER == qsv ]]; then
-      cat <<'EOF'
-      # The image ships a GStreamer plugin cache built without a GPU, so VA encoders
-      # are missing from it. A fresh cache is built at first use, with the GPU visible.
-      GST_REGISTRY: /tmp/gstreamer-registry.bin
-EOF
-    fi
     if [[ $NEKO_WEB_ACCESS == tunnel ]]; then
       echo '      NEKO_SERVER_PROXY: "true"     # trust the tunnel'"'"'s forwarded headers'
     fi

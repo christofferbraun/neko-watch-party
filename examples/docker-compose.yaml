@@ -16,15 +16,14 @@ services:
       - ./neko.yaml:/etc/neko/neko.yaml:ro
       - ./profile:/home/neko/.mozilla/firefox/profile.default
       - ./policies.json:/usr/lib/firefox/distribution/policies.json:ro
+      - ./intel-fix/neko-serve:/usr/bin/neko-serve:ro
+      - ./intel-fix/supervisord.neko.conf:/etc/neko/supervisord/neko.conf:ro
     environment:
       NEKO_MEMBER_MULTIUSER_USER_PASSWORD: ${NEKO_USER_PASSWORD}
       NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: ${NEKO_ADMIN_PASSWORD}
       NEKO_WEBRTC_UDPMUX: 52000
       NEKO_WEBRTC_TCPMUX: 52000
       NEKO_WEBRTC_ICELITE: 1
-      # The image ships a GStreamer plugin cache built without a GPU, so VA encoders
-      # are missing from it. A fresh cache is built at first use, with the GPU visible.
-      GST_REGISTRY: /tmp/gstreamer-registry.bin
       NEKO_SERVER_PROXY: "true"     # trust the tunnel's forwarded headers
       # Public IP is auto-detected at startup. To pin it, set it in ./setup.sh.
     depends_on:

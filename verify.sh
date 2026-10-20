@@ -27,6 +27,15 @@ policy_mounted() { dk exec neko cat /usr/lib/firefox/distribution/policies.json 
 profile_owned() { [[ $(stat -c %u profile 2>/dev/null) == 1000 ]]; }
 listening() { ss -Hl"$1"n "sport = :$2" | grep -q .; }
 no_pipeline_errors() { ! compose logs neko 2>&1 | grep -q 'pipeline error'; }
+# The neko server process (not just the neko user) must be in the GPU's render group.
+neko_has_gpu_group() {
+  local gid
+  gid=$(stat -c %g /dev/dri/renderD128 2>/dev/null) || return 1
+  # shellcheck disable=SC2016  # expands inside the container
+  dk exec neko sh -c 'for d in /proc/[0-9]*; do
+      tr "\0" " " < "$d/cmdline" 2>/dev/null | grep -q "^/usr/bin/neko serve" && grep "^Groups:" "$d/status"
+    done' | grep -qw "$gid"
+}
 
 step "Containers"
 for s in "${services[@]}"; do
@@ -45,6 +54,7 @@ if [[ -n $encoder ]]; then
 fi
 if [[ $encoder == va*h264enc ]]; then
   check "iGPU is passed into the container" dk exec neko test -e /dev/dri/renderD128
+  check "neko process has GPU access (render group)" neko_has_gpu_group
 fi
 # Pipelines only start when someone watches, so this catches errors from earlier viewers.
 if no_pipeline_errors; then
