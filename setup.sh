@@ -530,6 +530,13 @@ EOF
       NEKO_WEBRTC_TCPMUX: $port
       NEKO_WEBRTC_ICELITE: 1
 EOF
+    if [[ $NEKO_ENCODER == qsv ]]; then
+      cat <<'EOF'
+      # The image ships a GStreamer plugin cache built without a GPU, so VA encoders
+      # are missing from it. A fresh cache is built at first use, with the GPU visible.
+      GST_REGISTRY: /tmp/gstreamer-registry.bin
+EOF
+    fi
     if [[ $NEKO_WEB_ACCESS == tunnel ]]; then
       echo '      NEKO_SERVER_PROXY: "true"     # trust the tunnel'"'"'s forwarded headers'
     fi

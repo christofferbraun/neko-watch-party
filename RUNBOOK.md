@@ -168,6 +168,8 @@ sudo tcpdump -ni any port 52000
 
 **Video works for viewers outside, but never connects at home.** Your router doesn't support hairpin NAT, and neko advertises only your public IP. For now, watch from mobile data. The lasting fix is running neko with host networking and full ICE so it also offers its LAN IP, but that changes how cloudflared and the VPN proxy connect.
 
+**Black video, and neko's log says `(pipeline error) no element "vah264enc"`.** GStreamer's plugin cache inside the image was built without a GPU, so it doesn't list the VA encoders. `setup.sh` points `GST_REGISTRY` at a fresh cache to avoid this. If you set things up before that fix, run `git pull && ./setup.sh --defaults`.
+
 **`setup.sh` says the image has no VA-API plugin.** The neko image changed and dropped its GPU encoder plugins. Accept the CPU fallback for now, or pin an older image tag.
 
 **Not sure the iGPU encoder actually works?** The neko image doesn't include GStreamer's inspection tool, so this throwaway container installs it and lists the encoders your GPU exposes (it changes nothing on the server):

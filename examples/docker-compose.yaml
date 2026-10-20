@@ -22,6 +22,9 @@ services:
       NEKO_WEBRTC_UDPMUX: 52000
       NEKO_WEBRTC_TCPMUX: 52000
       NEKO_WEBRTC_ICELITE: 1
+      # The image ships a GStreamer plugin cache built without a GPU, so VA encoders
+      # are missing from it. A fresh cache is built at first use, with the GPU visible.
+      GST_REGISTRY: /tmp/gstreamer-registry.bin
       NEKO_SERVER_PROXY: "true"     # trust the tunnel's forwarded headers
       # Public IP is auto-detected at startup. To pin it, set it in ./setup.sh.
     depends_on:

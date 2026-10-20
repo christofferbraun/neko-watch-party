@@ -26,6 +26,7 @@ tunnel_registered() { compose logs cloudflared 2>&1 | grep -qi 'registered tunne
 policy_mounted() { dk exec neko cat /usr/lib/firefox/distribution/policies.json | cmp -s - policies.json; }
 profile_owned() { [[ $(stat -c %u profile 2>/dev/null) == 1000 ]]; }
 listening() { ss -Hl"$1"n "sport = :$2" | grep -q .; }
+no_pipeline_errors() { ! compose logs neko 2>&1 | grep -q 'pipeline error'; }
 
 step "Containers"
 for s in "${services[@]}"; do
@@ -44,6 +45,12 @@ if [[ -n $encoder ]]; then
 fi
 if [[ $encoder == va*h264enc ]]; then
   check "iGPU is passed into the container" dk exec neko test -e /dev/dri/renderD128
+fi
+# Pipelines only start when someone watches, so this catches errors from earlier viewers.
+if no_pipeline_errors; then
+  pass "No video pipeline errors in neko's log so far"
+else
+  flunk "neko's log has video pipeline errors: docker compose logs neko | grep 'pipeline error'"
 fi
 
 step "Browser"
