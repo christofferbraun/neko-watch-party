@@ -60,3 +60,7 @@ git pull && ./setup.sh --defaults   # pick up changes to these scripts
 ## More
 
 [RUNBOOK.md](RUNBOOK.md) covers how the traffic flows, the Cloudflare and router steps, troubleshooting, security notes and the Tailscale option.
+
+## License
+
+[MIT](LICENSE), except the files in [intel-fix/](intel-fix/), which are copied from [neko](https://github.com/m1k1o/neko) and stay under its [Apache-2.0 license](intel-fix/LICENSE).

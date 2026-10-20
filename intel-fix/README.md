@@ -3,7 +3,8 @@
 Unmodified copies of part of neko's fix for Quick Sync video failing with
 `(pipeline error) no element "vah264enc"` (black video for every viewer):
 [m1k1o/neko#721](https://github.com/m1k1o/neko/pull/721), commit `020def0`.
-neko is licensed under Apache-2.0.
+neko is licensed under Apache-2.0; its license is included here as
+[LICENSE](LICENSE). The rest of this repository is MIT-licensed.
 
 In neko v3.2.0 and earlier Intel images, GStreamer scans for encoders once,
 when neko starts. If that happens before VA-API is usable, `vah264enc` stays
