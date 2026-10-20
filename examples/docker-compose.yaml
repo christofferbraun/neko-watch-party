@@ -1,0 +1,53 @@
+# Example output of setup.sh: Intel Quick Sync, 1080p60, Cloudflare Tunnel, browser VPN.
+# Your real file is generated next to setup.sh; this copy is for reference only.
+services:
+  neko:
+    image: ghcr.io/m1k1o/neko/intel-firefox:latest
+    container_name: neko
+    restart: unless-stopped
+    shm_size: 2gb
+    devices:
+      - /dev/dri:/dev/dri          # iGPU for encoding + browser rendering
+    ports:
+      - "127.0.0.1:8080:8080"      # web UI
+      - "52000:52000/udp"          # WebRTC media; must be the same port on both sides
+      - "52000:52000/tcp"          # WebRTC fallback when UDP is blocked
+    volumes:
+      - ./neko.yaml:/etc/neko/neko.yaml:ro
+      - ./profile:/home/neko/.mozilla/firefox/profile.default
+      - ./policies.json:/usr/lib/firefox/distribution/policies.json:ro
+    environment:
+      NEKO_MEMBER_MULTIUSER_USER_PASSWORD: ${NEKO_USER_PASSWORD}
+      NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: ${NEKO_ADMIN_PASSWORD}
+      NEKO_WEBRTC_UDPMUX: 52000
+      NEKO_WEBRTC_TCPMUX: 52000
+      NEKO_WEBRTC_ICELITE: 1
+      NEKO_SERVER_PROXY: "true"     # trust the tunnel's forwarded headers
+      # Public IP is auto-detected at startup. To pin it, set it in ./setup.sh.
+    depends_on:
+      - gluetun
+
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    # Never publish ports here: port 8888 would become an open proxy.
+    env_file: gluetun.env
+    environment:
+      HTTPPROXY: "on"
+      HTTPPROXY_LISTENING_ADDRESS: ":8888"
+      TZ: ${TZ}
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - neko

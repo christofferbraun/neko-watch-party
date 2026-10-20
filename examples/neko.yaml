@@ -1,0 +1,46 @@
+# Example output of setup.sh: Intel Quick Sync, 1080p60, with the 720p30 fallback stream.
+# Your real file is generated next to setup.sh; this copy is for reference only.
+desktop:
+  screen: "1920x1080@60"
+
+capture:
+  video:
+    codec: h264
+    ids: [ hd, sd ]          # first = default; viewers can switch in the UI
+    pipelines:
+      hd:   # 1920x1080 at 60 fps, vah264enc
+        gst_pipeline: |
+          ximagesrc display-name={display} show-pointer=false use-damage=false
+          ! video/x-raw,framerate=60/1
+          ! videoconvert n-threads=4 ! queue
+          ! video/x-raw,format=NV12
+          ! vah264enc
+            name=encoder
+            bitrate=8000
+            rate-control=cbr
+            key-int-max=60
+            b-frames=0
+            target-usage=6
+          ! h264parse config-interval=-1
+          ! video/x-h264,stream-format=byte-stream
+          ! appsink name=appsink
+      sd:   # 1280x720 at 30 fps, for viewers on weak connections
+        gst_pipeline: |
+          ximagesrc display-name={display} show-pointer=false use-damage=false
+          ! video/x-raw,framerate=30/1
+          ! videoscale ! videoconvert n-threads=2 ! queue
+          ! video/x-raw,width=1280,height=720,format=NV12
+          ! vah264enc
+            name=encoder
+            bitrate=3000
+            rate-control=cbr
+            key-int-max=30
+            b-frames=0
+            target-usage=6
+          ! h264parse config-interval=-1
+          ! video/x-h264,stream-format=byte-stream
+          ! appsink name=appsink
+
+session:
+  implicit_hosting: false    # viewers request control instead of grabbing it
+  merciful_reconnect: true
