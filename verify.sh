@@ -20,21 +20,28 @@ check() {
 [[ -f docker-compose.yaml ]] || die "No docker-compose.yaml. Run ./setup.sh first."
 mapfile -t services < <(compose config --services 2>/dev/null)
 ((${#services[@]})) || die "docker compose can't read the config. Try: docker compose config"
+# Helpers capture output before searching it: with pipefail, piping into grep -q can
+# fail the whole pipeline when grep exits early or the producer exits non-zero.
 has() { printf '%s\n' "${services[@]}" | grep -qx "$1"; }
 running() { [[ $(dk inspect -f '{{.State.Running}}' "$1" 2>/dev/null) == true ]]; }
-tunnel_registered() { compose logs cloudflared 2>&1 | grep -qi 'registered tunnel connection'; }
+# Logs since the container last started, so errors from before a restart don't count.
+recent_logs() { compose logs --no-log-prefix --since "$(dk inspect -f '{{.State.StartedAt}}' "$1")" "$1" 2>&1; }
+tunnel_registered() { local logs; logs=$(recent_logs cloudflared); grep -qi 'registered tunnel connection' <<<"$logs"; }
 policy_mounted() { dk exec neko cat /usr/lib/firefox/distribution/policies.json | cmp -s - policies.json; }
 profile_owned() { [[ $(stat -c %u profile 2>/dev/null) == 1000 ]]; }
-listening() { ss -Hl"$1"n "sport = :$2" | grep -q .; }
-no_pipeline_errors() { ! compose logs neko 2>&1 | grep -q 'pipeline error'; }
+listening() { local out; out=$(ss -Hl"$1"n "sport = :$2"); [[ -n $out ]]; }
+no_pipeline_errors() { local logs; logs=$(recent_logs neko); ! grep -q 'pipeline error' <<<"$logs"; }
 # The neko server process (not just the neko user) must be in the GPU's render group.
 neko_has_gpu_group() {
-  local gid
+  local gid groups
   gid=$(stat -c %g /dev/dri/renderD128 2>/dev/null) || return 1
   # shellcheck disable=SC2016  # expands inside the container
-  dk exec neko sh -c 'for d in /proc/[0-9]*; do
-      tr "\0" " " < "$d/cmdline" 2>/dev/null | grep -q "^/usr/bin/neko serve" && grep "^Groups:" "$d/status"
-    done' | grep -qw "$gid"
+  groups=$(dk exec neko sh -c 'for d in /proc/[0-9]*; do
+      case "$(tr "\0" " " < "$d/cmdline" 2>/dev/null)" in
+        "/usr/bin/neko serve"*) grep "^Groups:" "$d/status" ;;
+      esac
+    done' 2>/dev/null)
+  grep -qw "$gid" <<<"$groups"
 }
 
 step "Containers"
@@ -71,7 +78,7 @@ check "profile/ is owned by UID 1000" profile_owned
 
 if has gluetun; then
   check "Policy sends browsing through gluetun" jq -e '.policies.Proxy.HTTPProxy == "gluetun:8888"' policies.json
-  vpn_ip=$(compose logs gluetun 2>&1 | grep -i 'public ip' | tail -n1 | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n1)
+  vpn_ip=$(recent_logs gluetun | grep -i 'public ip' | tail -n1 | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n1)
   home_ip=$(public_ip)
   if [[ -z $vpn_ip ]]; then
     flunk "gluetun hasn't reported a VPN IP yet (docker compose logs gluetun)"
