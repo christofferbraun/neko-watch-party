@@ -8,6 +8,8 @@ services:
     shm_size: 2gb
     devices:
       - /dev/dri:/dev/dri          # iGPU for encoding + browser rendering
+    entrypoint: ["/usr/bin/entrypoint.sh"]   # intel-fix/: render group before supervisord
+    command: ["/usr/bin/supervisord","-c","/etc/neko/supervisord.conf"]
     ports:
       - "127.0.0.1:8080:8080"      # web UI
       - "52000:52000/udp"          # WebRTC media; must be the same port on both sides
@@ -18,12 +20,14 @@ services:
       - ./policies.json:/usr/lib/firefox/distribution/policies.json:ro
       - ./intel-fix/neko-serve:/usr/bin/neko-serve:ro
       - ./intel-fix/supervisord.neko.conf:/etc/neko/supervisord/neko.conf:ro
+      - ./intel-fix/entrypoint.sh:/usr/bin/entrypoint.sh:ro
     environment:
       NEKO_MEMBER_MULTIUSER_USER_PASSWORD: ${NEKO_USER_PASSWORD}
       NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: ${NEKO_ADMIN_PASSWORD}
       NEKO_WEBRTC_UDPMUX: 52000
       NEKO_WEBRTC_TCPMUX: 52000
       NEKO_WEBRTC_ICELITE: 1
+      LIBVA_DRIVER_NAME: iHD         # intel-fix/: libva needs it to use the X display
       NEKO_SERVER_PROXY: "true"     # trust the tunnel's forwarded headers
       # Public IP is auto-detected at startup. To pin it, set it in ./setup.sh.
     depends_on:

@@ -168,7 +168,7 @@ sudo tcpdump -ni any port 52000
 
 **Video works for viewers outside, but never connects at home.** Your router doesn't support hairpin NAT, and neko advertises only your public IP. For now, watch from mobile data. The lasting fix is running neko with host networking and full ICE so it also offers its LAN IP, but that changes how cloudflared and the VPN proxy connect.
 
-**Black video, and neko's log says `(pipeline error) no element "vah264enc"`.** A startup race in neko v3.2.0 and earlier Intel images: neko scans for encoders before VA-API is usable. `setup.sh` applies part of neko's upstream fix to such images (see [intel-fix/](intel-fix/README.md)); run `git pull && ./update.sh` to get it. If `verify.sh` then says the neko process lacks GPU access, restart just neko once the container is up: `docker compose restart neko`.
+**Black video, and neko's log says `(pipeline error) no element "vah264enc"`.** Startup races in neko v3.2.0 and earlier Intel images: neko can start before it's in the GPU's render group, and scans for encoders before VA-API is usable. `setup.sh` applies neko's upstream fix to such images (see [intel-fix/](intel-fix/README.md)); run `git pull && ./update.sh` to get it. Give neko about 30 seconds after a restart before running `verify.sh`. If the neko log says `neko-serve: VA-API was not usable after 30s`, check the host driver (below).
 
 **`setup.sh` says the image has no VA-API plugin.** The neko image changed and dropped its GPU encoder plugins. Accept the CPU fallback for now, or pin an older image tag.
 

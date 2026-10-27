@@ -349,6 +349,8 @@ detect_encoder_element() {
       # Images older than neko's fix for encoders failing to register lack neko-serve.
       if ! dk run --rm --entrypoint test "$NEKO_IMAGE" -x /usr/bin/neko-serve >/dev/null 2>&1; then
         INTEL_FIX=yes
+        # The fix replaces the entrypoint, which makes compose drop the image's CMD.
+        NEKO_IMAGE_CMD=$(dk image inspect -f '{{json .Config.Cmd}}' "$NEKO_IMAGE")
         ok "This image predates neko's Quick Sync startup fix; applying it from intel-fix/"
       fi
       return 0
@@ -519,6 +521,12 @@ EOF
       - /dev/dri:/dev/dri          # iGPU for encoding + browser rendering
 EOF
     fi
+    if [[ $INTEL_FIX == yes ]]; then
+      cat <<EOF
+    entrypoint: ["/usr/bin/entrypoint.sh"]   # intel-fix/: render group before supervisord
+    command: $NEKO_IMAGE_CMD
+EOF
+    fi
     echo "    ports:"
     printf '      - %-26s # %s\n' \
       "\"$bind:$NEKO_HTTP_PORT:8080\"" "web UI" \
@@ -534,6 +542,7 @@ EOF
       cat <<'EOF'
       - ./intel-fix/neko-serve:/usr/bin/neko-serve:ro
       - ./intel-fix/supervisord.neko.conf:/etc/neko/supervisord/neko.conf:ro
+      - ./intel-fix/entrypoint.sh:/usr/bin/entrypoint.sh:ro
 EOF
     fi
     cat <<EOF
@@ -544,6 +553,9 @@ EOF
       NEKO_WEBRTC_TCPMUX: $port
       NEKO_WEBRTC_ICELITE: 1
 EOF
+    if [[ $INTEL_FIX == yes ]]; then
+      echo '      LIBVA_DRIVER_NAME: iHD         # intel-fix/: libva needs it to use the X display'
+    fi
     if [[ $NEKO_WEB_ACCESS == tunnel ]]; then
       echo '      NEKO_SERVER_PROXY: "true"     # trust the tunnel'"'"'s forwarded headers'
     fi
