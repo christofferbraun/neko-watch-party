@@ -16,8 +16,8 @@ missing until neko restarts.
 | `supervisord.neko.conf` | `/etc/neko/supervisord/neko.conf` | Starts neko through `neko-serve` |
 
 `setup.sh` mounts these only when the neko image doesn't already contain
-`/usr/bin/neko-serve`. Once a neko release ships the fix, re-running
-`./setup.sh --defaults` stops using them.
+`/usr/bin/neko-serve`, and `update.sh` re-checks after every pull, so once a neko
+release ships the fix, the next `./update.sh` stops using them.
 
 The upstream fix has a second part that isn't applied here: an entrypoint
 that grants the render group before supervisord starts, which fixes a race

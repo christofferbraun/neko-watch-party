@@ -168,7 +168,7 @@ sudo tcpdump -ni any port 52000
 
 **Video works for viewers outside, but never connects at home.** Your router doesn't support hairpin NAT, and neko advertises only your public IP. For now, watch from mobile data. The lasting fix is running neko with host networking and full ICE so it also offers its LAN IP, but that changes how cloudflared and the VPN proxy connect.
 
-**Black video, and neko's log says `(pipeline error) no element "vah264enc"`.** A startup race in neko v3.2.0 and earlier Intel images: neko scans for encoders before VA-API is usable. `setup.sh` applies part of neko's upstream fix to such images (see [intel-fix/](intel-fix/README.md)); run `git pull && ./setup.sh --defaults` to get it. If `verify.sh` then says the neko process lacks GPU access, restart just neko once the container is up: `docker compose restart neko`.
+**Black video, and neko's log says `(pipeline error) no element "vah264enc"`.** A startup race in neko v3.2.0 and earlier Intel images: neko scans for encoders before VA-API is usable. `setup.sh` applies part of neko's upstream fix to such images (see [intel-fix/](intel-fix/README.md)); run `git pull && ./update.sh` to get it. If `verify.sh` then says the neko process lacks GPU access, restart just neko once the container is up: `docker compose restart neko`.
 
 **`setup.sh` says the image has no VA-API plugin.** The neko image changed and dropped its GPU encoder plugins. Accept the CPU fallback for now, or pin an older image tag.
 
@@ -248,7 +248,7 @@ The open port is low-risk. The main trade-off is that logged-in viewers can see 
 ## Maintenance
 
 ```bash
-./update.sh                          # newer images + refreshed browser policy
+./update.sh                          # newer images, regenerated config + browser policy
 git pull && ./setup.sh --defaults    # newer versions of these scripts
 ./setup.sh                           # change passwords or any other setting
 

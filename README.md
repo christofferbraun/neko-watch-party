@@ -31,7 +31,7 @@ Before you run it, have these ready:
 | --- | --- |
 | [setup.sh](setup.sh) | Interactive setup. `--defaults` regenerates the config from saved answers without asking. |
 | [verify.sh](verify.sh) | Checks the running install: containers, tunnel, encoder, VPN IP, browser policy, ports. Then lists the checks that need a real viewer. |
-| [update.sh](update.sh) | Pulls new images, refreshes neko's stock browser policy, rebuilds yours and recreates the containers. |
+| [update.sh](update.sh) | Pulls new images, regenerates `neko.yaml` and `docker-compose.yaml` for them, refreshes neko's stock browser policy, rebuilds yours and recreates the containers. |
 | [build-policy.sh](build-policy.sh) | Rebuilds `policies.json` (VPN proxy, direct hosts, keep cookies). The other scripts run it for you. |
 
 ## Generated files
